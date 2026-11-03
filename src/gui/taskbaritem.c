@@ -39,6 +39,33 @@ static gboolean taskbar_item_action_exec ( GtkWidget *self, gint slot,
   return TRUE;
 }
 
+static gboolean taskbar_item_enter_cb ( GtkWidget *button,
+    GdkEventCrossing *event, GtkWidget *self )
+{
+  TaskbarItemPrivate *priv;
+  gboolean preview;
+  gint64 now;
+
+  (void)button;
+  g_return_val_if_fail(IS_TASKBAR_ITEM(self), FALSE);
+  if(event->detail == GDK_NOTIFY_INFERIOR)
+    return FALSE;
+
+  priv = taskbar_item_get_instance_private(TASKBAR_ITEM(self));
+  g_object_get(G_OBJECT(priv->taskbar), "preview", &preview, NULL);
+  if(!preview || !priv->icon || !priv->win->stable_id ||
+      !capture_support_check(CAPTURE_TYPE_WINDOW))
+    return FALSE;
+
+  now = g_get_monotonic_time();
+  if(priv->last_capture && now - priv->last_capture < 300 * 1000)
+    return FALSE;
+
+  priv->last_capture = now;
+  capture_window(priv->win);
+  return FALSE;
+}
+
 static void taskbar_item_style_updated ( GtkWidget *w, GtkWidget *self )
 {
   TaskbarItemPrivate *priv;
@@ -280,6 +307,9 @@ GtkWidget *taskbar_item_new( window_t *win, GtkWidget *taskbar )
   taskbar_item_labels_handle(taskbar, NULL, self);
 
   gtk_widget_add_events(self, GDK_BUTTON_RELEASE_MASK | GDK_SCROLL_MASK);
+  gtk_widget_add_events(button, GDK_ENTER_NOTIFY_MASK);
+  g_signal_connect(button, "enter-notify-event",
+      G_CALLBACK(taskbar_item_enter_cb), self);
   taskbar_item_invalidate(self);
 
   return self;

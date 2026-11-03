@@ -33,6 +33,7 @@ struct _TaskbarItemPrivate
   window_t *win;
   gboolean invalid;
   gboolean dir;
+  gint64 last_capture;
   GdkModifierType saved_modifiers;
 };
 
