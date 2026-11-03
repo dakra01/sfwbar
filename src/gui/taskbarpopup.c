@@ -242,6 +242,10 @@ static void taskbar_popup_update ( GtkWidget *self )
   flow_grid_update(priv->tgroup);
   flow_item_set_active(self, flow_grid_n_children(priv->tgroup, TRUE)>0);
   priv->single = (flow_grid_n_children(priv->tgroup, TRUE)==1);
+  
+  win = flow_grid_get_sole_source(priv->tgroup);
+    css_set_class(priv->button, "running",
+        flow_grid_n_children(priv->tgroup, TRUE) > 1 || (win && !win->pin));
 
   window_collapse_popups(priv->popover);
   gtk_widget_hide(priv->popover);
