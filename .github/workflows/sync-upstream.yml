@@ -1,0 +1,58 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Merge upstream into sync branch
+        id: merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/LBCrion/sfwbar.git
+          git fetch upstream main
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "Already up to date"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git checkout -B sync/upstream
+          git merge upstream/main -m "Merge upstream LBCrion/sfwbar main"
+          git push -f origin sync/upstream
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          if [ -z "$(gh pr list --head sync/upstream --base main --json number --jq '.[].number')" ]; then
+            gh pr create --base main --head sync/upstream \
+              --title "Merge upstream sfwbar" \
+              --body "Automated merge of LBCrion/sfwbar main into main."
+          fi
+
+      - name: Install build dependencies
+        if: steps.merge.outputs.changed == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build pkg-config libgtk-3-dev \
+            libgtk-layer-shell-dev libjson-c-dev libwayland-dev \
+            wayland-protocols libpulse-dev libpulse-mainloop-glib0 \
+            libxkbregistry-dev libxkbcommon-dev libasound2-dev libpipewire-0.3-dev
+
+      - name: Build check
+        if: steps.merge.outputs.changed == 'true'
+        run: |
+          meson setup build
+          ninja -C build
