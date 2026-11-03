@@ -53,6 +53,9 @@ static gboolean taskbar_item_enter_cb ( GtkWidget *button,
 
   priv = taskbar_item_get_instance_private(TASKBAR_ITEM(self));
   g_object_get(G_OBJECT(priv->taskbar), "preview", &preview, NULL);
+  g_debug("Taskbar hover: title=%s preview=%d icon=%d stable_id=%s",
+      priv->win->title? priv->win->title : "", preview, !!priv->icon,
+      priv->win->stable_id? priv->win->stable_id : "(missing)");
   if(!preview || !priv->icon || !priv->win->stable_id ||
       !capture_support_check(CAPTURE_TYPE_WINDOW))
     return FALSE;

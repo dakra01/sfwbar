@@ -88,6 +88,7 @@ static void capture_frame_ready ( void *data,
 static void capture_frame_failed ( void *data,
     struct ext_image_copy_capture_frame_v1 *frame, uint32_t reason)
 {
+  g_debug("Window capture frame failed with reason %u", reason);
   capture_node_free(data);
 }
 
@@ -137,6 +138,8 @@ static void capture_session_done ( void *data,
     !(node->buff = wayland_buffer_new(node->width, node->height,
         node->shm_format)) )
   {
+    g_debug("Window capture has no usable ARGB8888 buffer (%ux%u, format %u)",
+        node->width, node->height, node->shm_format);
     capture_node_free(data);
     return;
   }
@@ -213,6 +216,7 @@ static void capture_toplevel_cb ( gpointer data, gchar *name )
 
   scale_image_cache_remove(win->image);
   str_assign(&win->image, name);
+  g_debug("Updated window preview for %s", win->title? win->title : "");
   wintree_commit(win);
 }
 
@@ -220,12 +224,28 @@ void capture_window ( window_t *win )
 {
   gpointer toplevel;
 
-  if(!capture_support_check(CAPTURE_TYPE_WINDOW)) 
+  if(!capture_support_check(CAPTURE_TYPE_WINDOW))
+  {
+    g_debug("Window capture managers are unavailable");
     return;
-  if( (toplevel = ext_ftl_lookup(win->stable_id)) )
-    capture_from_source(
-        ext_foreign_toplevel_image_capture_source_manager_v1_create_source(
-          capture_toplevel_source, toplevel), capture_toplevel_cb, win->uid);
+  }
+  if(!win->stable_id)
+  {
+    g_debug("Cannot capture window %s: no stable identifier",
+        win->title? win->title : "");
+    return;
+  }
+  if( !(toplevel = ext_ftl_lookup(win->stable_id)) )
+  {
+    g_debug("No foreign-toplevel source matches stable identifier %s",
+        win->stable_id);
+    return;
+  }
+
+  g_debug("Requesting capture for window %s", win->title? win->title : "");
+  capture_from_source(
+      ext_foreign_toplevel_image_capture_source_manager_v1_create_source(
+        capture_toplevel_source, toplevel), capture_toplevel_cb, win->uid);
 }
 
 void capture_window_image_set_appid ( GtkWidget *image, gchar *appid )
