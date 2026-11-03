@@ -110,21 +110,29 @@ static value_t lib_compositor_lib_window_info ( vm_t *vm, value_t p[], gint np )
 
   widget = vm_widget_get(vm, np==2? value_get_string(p[0]) : NULL);
 
-  if( (win = flow_item_get_source(widget)) )
-  {
-    if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "appid"))
-      return value_new_string(win->appid);
-    if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "title"))
-      return value_new_string(win->title);
-    if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "minimized"))
-      return value_new_numeric(!!(win->state & WS_MINIMIZED));
-    if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "maximized"))
-      return value_new_numeric(!!(win->state & WS_MAXIMIZED));
-    if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "fullscreen"))
-      return value_new_numeric(!!(win->state & WS_FULLSCREEN));
-    if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "focused"))
-      return value_new_numeric(wintree_is_focused(win->uid));
-  }
+  /* FlickOS: a taskbar group's button (group = popup, the Cupertino dock)
+     * has its app id as source, not a window: take the window the action runs
+     * for, as Focus() and Minimize() do. Reading the app id as a window_t made
+     * WindowInfo('focused') false, so a click never minimized. */
+    if(widget && IS_TASKBAR_POPUP(widget))
+      win = wintree_from_id(VM_WINDOW(vm));
+    else
+      win = flow_item_get_source(widget);
+    if(win)
+    {
+      if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "appid"))
+        return value_new_string(win->appid);
+      if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "title"))
+        return value_new_string(win->title);
+      if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "minimized"))
+        return value_new_numeric(!!(win->state & WS_MINIMIZED));
+      if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "maximized"))
+        return value_new_numeric(!!(win->state & WS_MAXIMIZED));
+      if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "fullscreen"))
+        return value_new_numeric(!!(win->state & WS_FULLSCREEN));
+      if(!g_ascii_strcasecmp(value_get_string(p[np-1]), "focused"))
+        return value_new_numeric(wintree_is_focused(win->uid));
+    }
 
   return value_na;
 }
