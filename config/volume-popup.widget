@@ -106,7 +106,7 @@ Private {
 
   Function XVolumeToggleChannels() {
     Var DeviceId = Extract(WidgetId(), "(.*)_expand");
-    Var State = WidgetState(1)
+    Var State = WidgetGetState(1)
     Var DeviceTmpl = "
       image '@DEVICE_ID@_expand' { value = '%EXPAND_ICON%' }
       scale '@DEVICE_ID@_volume' { style = '%VOLUME_STYLE%' }
@@ -117,7 +117,7 @@ Private {
       "%VOLUME_STYLE%", If(State, "volume_scale", "hidden"),
       "%CHANNELS_STYLE%", If(State, "hidden", "volume_channel_list")));
 
-    UserState(WidgetId(),If(State, "off", "on"))
+    WidgetSetState(WidgetId(),If(State, "off", "on"))
   }
 
   Function XVolumeChannelHandler() {
@@ -137,11 +137,12 @@ Private {
     MenuItemClear(device_id)
     If interface = "sink"
       Config(ReplaceAll($XVolumeSinkMenuTmpl, "@SINK_NAME@", device_id,
-          "@SINK_DESC@", VolumeInfo("sink-description", device_id)))
+          "@SINK_DESC@", VolumeInfo("sink-description",
+            Replace(device_id, "'", "`"))))
   }
 
   Function XVolumeChannelRemove() {
-    ClearWidget(device_id)
+    WidgetClear(device_id)
     MenuItemClear(device_id)
   }
 
